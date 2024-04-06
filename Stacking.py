@@ -1,12 +1,3 @@
-import os
-import cv2
-import numpy as np
-import efficientnet.keras as efn
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-
 # Initialize EfficientNetB0 model
 effnet_model = efn.EfficientNetB0(weights='imagenet', include_top=False, pooling='avg')
 
@@ -56,7 +47,7 @@ y = np.array(labels)
 # Splitting the dataset into train and test sets
 X_effnet_train, X_effnet_test, y_train, y_test = train_test_split(X_effnet, y, test_size=0.2, random_state=42)
 
-# Initialize base classifiers (Random Forest, SVC, EfficientNetB0)
+# Initialize base classifiers (Random Forest, SVC)
 random_forest = RandomForestClassifier(n_estimators=100, random_state=42)
 svm = SVC(kernel='linear', C=1.0)
 
@@ -68,8 +59,8 @@ svm.fit(X_effnet_train, y_train)
 y_pred_rf = random_forest.predict(X_effnet_test)
 y_pred_svm = svm.predict(X_effnet_test)
 
-# Stack predictions from base classifiers to form input for meta learner
-X_meta_train = np.column_stack((y_pred_rf, y_pred_svm))
+# Stack predictions from base classifiers and EfficientNetB0 features to form input for meta learner
+X_meta_train = np.column_stack((y_pred_rf, y_pred_svm, X_effnet_test))  # Include EfficientNetB0 features
 
 # Initialize meta learner (e.g., logistic regression)
 meta_learner = LogisticRegression()
@@ -82,7 +73,7 @@ y_train_pred_rf = random_forest.predict(X_effnet_train)
 y_train_pred_svm = svm.predict(X_effnet_train)
 
 # Stack predictions from base classifiers on the training set to form input for meta learner
-X_meta_test = np.column_stack((y_train_pred_rf, y_train_pred_svm))
+X_meta_test = np.column_stack((y_train_pred_rf, y_train_pred_svm, X_effnet_train))  # Include EfficientNetB0 features
 
 # Predictions from meta learner on the stacked predictions
 y_pred_meta = meta_learner.predict(X_meta_test)
